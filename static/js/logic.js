@@ -1,13 +1,8 @@
 var queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
 
-// Perform a GET request to the query URL
+// Perform a GET request to the queryURL
 d3.json(queryUrl).then(function (data) {
-  createFeatures(data.features);
-});
-
-
-// CREATE BASIC MAPS: LIGHT MAP AND SATELLITE MAP
-function createMap(earthquakes) {
+  var earthquakeData = data.features;
 
   // Define streetmap and darkmap layers
   var lightmap = L.tileLayer("https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}", {
@@ -32,94 +27,85 @@ function createMap(earthquakes) {
     "Satellite": satellitemap
   };
 
-  // Create overlay object to hold the overlay layer
-  var overlayMaps = {
-    Earthquakes: earthquakes
-  };
+  // Create overlay object to hold the overlay layer, this messes up my page too
+  // var overlayMaps = {
+  //   Earthquakes: earthquakes
+  // };
 
   // Create myMap, giving it the lightmap and earthquakes layers to display on load
   var myMap = L.map("map", {
     center: [37.09, -95.71],
     zoom: 5,
-    layers: [lightmap, earthquakes]
+    layers: [lightmap]
   });
 
-  // Create a layer control
-  L.control.layers(baseMaps, overlayMaps, {
-    collapsed: false
-  })
-    .addTo(myMap);
-  
-    // I got this from an example in a website 
+  for (var i = 0; i < earthquakeData.length; i++) {
+    var earthquake = earthquakeData[i];
+    var coord = earthquake.geometry.coordinates
+
+    // 1. get var from data
+    var depth = earthquake.geometry.coordinates[2]
+
+    // 2. define var to represent color
+    var colorscale = depth;
+
+    // 3. change color based on depth
+    if (depth > 25) { colorscale = "red"; }
+    else if (depth > 15) { colorscale = "yellow"; }
+    else { colorscale = "green"; }
+
+    // 1. get var from data
+    var magnitude = earthquake.properties.mag
+
+    // 2. define var to represent size
+    var mapRadius = magnitude;
+
+    // 3. change size based on magnitude
+    if (magnitude > 2.5) { mapRadius = 10; }
+    else if (magnitude > 5.4) { mapRadius = 20; }
+    else if (magnitude > 6.0) { mapRadius = 30; }
+    else if (magnitude > 6.9) { mapRadius = 40; }
+    else { magnitude = 50; }
+    L.circleMarker([coord[1], coord[0]], {
+      fillOpacity: 0.9,
+      color: colorscale,
+      fillColor: colorscale,
+      radius: mapRadius
+    }).addTo(myMap);
+  }
+  // the markers don't appear in the map and whenever i load this, my page starts blinking
+  //   var markerOptions = {
+  //   fillOpacity: 0.75,
+  //   color: "white",
+  //   fillColor: color,
+  //   radius: magnitude * 200
+  // };
+  // L.geoJSON(earthquakeData, {
+  //   pointToLayer: function (feature, latlng) {
+  //     return L.circleMarker(latlng, markerOptions);
+  //   }
+  // })
+
+  // Whenever i use the legend, my page no longer works (i got this example from a website)
   // var legend = L.control({position: 'bottomright'});
   // legend.onAdd = function(myMap){
   //   var div = L.DomUtil.create('div','legend');
   //   var labels = ["Magnitude of 0-2.49","Magnitude of 2.5-5.49",
   //     "Magnitude of 5.5-6.09", "Magnitude of 6.1-6.99", "Magnitude of 7.0-7.99"];
-      // if "magnitude" is in anither function, how do i use this for the "mag" variable?
+  
+  // if "magnitude" is in another function, how do i use this for the "mag" variable?
   //   var mag = [100000001,50000001,50000000];
-      //do i have to create a special div or b in the html or will this override it?
+  
+  //do i have to create a special div or b in the html or will this override it?
   //   div.innerHTML='<div><b>Legend</b></div';
   //   for(var i = 0; i <mag.length; i++){
-        //this is where i get lost...
+  
+  //this is where i get lost...
   //     div.innerHTML +='<i style = "background:' + getCountyColor(mag[i]) + '''>&nbsp;</i>&nbsp;&nbsp;'
   //     + labels[i] + '<br/>';
   //   }
   //   return div;
   // }
   // legend.addTo(myMap);
-}
 
-// CREATE EARTHQUAKE FEATURES
-function createFeatures(earthquakeData) {
-
-  // For each feature create Popup layer, size and color the marker
-  function onEachFeature(feature, layer) {
-    layer.bindPopup("<h3> Magnitude: " + feature.properties.mag +
-      "</h3><hr><h3> Location: " + (feature.properties.place) + "</h3><hr><h3> Depth: "
-      + (feature.geometry.coordinates[2]) + "</h3>");
-
-    var magnitude = feature.properties.mag
-    var depth = feature.geometry.coordinates[2]
-    var longitude = feature.geometry.coordinates[0]
-    var latitude = feature.geometry.coordinates[1]
-
-    // Conditional coloring of circles based on depth
-    var color = "";
-    if (depth > 25) { color = "red"; }
-    else if (depth > 15) { color = "yellow"; }
-    else { color = "green"; }
-
-    // Size the marker based on the magnitude of the earthquake
-    
-    // i added this from the leaflet website but it doesn't work
-    // var circle = L.circle([51.508, -0.11], {
-    //   fillOpacity: 0.5,
-    //   color: 'red',
-    //   fillColor: '#f03',
-    //   radius: 500
-    // }).addTo(myMap);
-
-    var markerOptions = {
-      fillOpacity: 0.75,
-      color: "white",
-      fillColor: color,
-      radius: magnitude * 200
-    };
-    // the markers don't appear in the map
-    L.geoJSON(earthquakeData, {
-      pointToLayer: function (feature, latlng) {
-        return L.circleMarker(latlng, markerOptions);
-      }
-    })
-  }
-
-  // Create a GeoJSON layer 
-  var earthquakes = L.geoJSON(earthquakeData, {
-    onEachFeature: onEachFeature
-
-  });
-
-  // Sending the earthquakes layer to the createMap function
-  createMap(earthquakes);
-}
+})
